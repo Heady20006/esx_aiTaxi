@@ -41,7 +41,7 @@ AddEventHandler('esx_aiTaxi:callTaxi', function(coords)
 		Wait(50)
 	end
 	if ped == nil then
-		ped =  CreatePed(4, hash, Config.PedSpawn, Config.PedSpawnHeading, false, true)
+		ped =  CreatePed(4, hash, Config.PedSpawn, Config.PedSpawnHeading, true, true)
 	end
 	if DoesEntityExist(globalTaxi) then
 		ESX.Game.DeleteVehicle(globalTaxi)
