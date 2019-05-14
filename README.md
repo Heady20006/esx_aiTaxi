@@ -18,16 +18,23 @@ Features:
 (use this site to create a drivingmode: https://vespura.com/drivingstyle/)
 (thx @Vespura for this greate site :heavy_heart_exclamation:)
 
+UPDATE 14.05.2019
+- there are multiple spawnpoints of the vehicle
+- it will looking for the best spawn (the nearest)
+- first option in GCPHONE is to call the taxi
+(you can not call a taxi twice)
+- second option is to cancel the order
+
+
 here are two vids (one with AI-Traffic and one without)
 
 https://plays.tv/video/5cd94b7883d9ca60be/aitaxi-without-traffic
 
-
 https://plays.tv/video/5cd94c1f9f000a9f19/aitaxi-with-traffic
 
-If you want to get it work with gcphone you have to do a little edit:
-esx_addons_gcphone:
-server/main.lua
+TO GET IT WORK WITH YOUR GCPHONE YOU HAVE TO EDIT:
+**esx_addons_gcphone**
+*server.lua*
 
 find:
 ```
@@ -47,15 +54,20 @@ AddEventHandler('esx_addons_gcphone:startCall', function (number, message, coord
   end
 end)
 ```
- and replace it with:
+ **and replace it with:**
 
 ```
 RegisterServerEvent('esx_addons_gcphone:startCall')
 AddEventHandler('esx_addons_gcphone:startCall', function (number, message, coords)
   local source = source
+
   if PhoneNumbers[number] ~= nil then
 	if number == 'taxi' then
-		TriggerClientEvent('esx_aiTaxi:callTaxi', source, coords)
+		if message == 'cancel' then
+			TriggerClientEvent('esx_aiTaxi:cancelTaxi', source, true)
+		else
+			TriggerClientEvent('esx_aiTaxi:callTaxi', source, coords)
+		end
 	else
 		getPhoneNumber(source, function (phone) 
 		  notifyAlertSMS(number, {
@@ -71,80 +83,38 @@ AddEventHandler('esx_addons_gcphone:startCall', function (number, message, coord
 end)
 ```
 
-to get it work with esx_phone3 you have to edit this:
-client/main.lua
-find:
+Add this to the *config.json* of gcphone
+these are the last lines in area of "serviceCall"
 
 ```
-RegisterNUICallback('send', function(data)
-
-  local phoneNumber = data.number
-  local playerPed   = GetPlayerPed(-1)
-  local coords      = GetEntityCoords(playerPed)
-
-  if tonumber(phoneNumber) ~= nil then
-    phoneNumber = tonumber(phoneNumber)
-  end
-
-  TriggerServerEvent('esx_phone:send', phoneNumber, data.message, data.anon, {
-    x = coords.x,
-    y = coords.y,
-    z = coords.z
-  })
-
-  ESX.ShowNotification('Mensagem Enviada')
-
-end)
-```
-
-and replace with:
-
-```
-RegisterNUICallback('send', function(data)
-
-  local phoneNumber = data.number
-  local playerPed   = GetPlayerPed(-1)
-  local coords      = GetEntityCoords(playerPed)
-	if data.number == 'taxi' then
-		TriggerEvent('esx_aiTaxi:callTaxi', coords)
-	else
-  if tonumber(phoneNumber) ~= nil then
-    phoneNumber = tonumber(phoneNumber)
-  end
-
-  TriggerServerEvent('esx_phone:send', phoneNumber, data.message, data.anon, {
-    x = coords.x,
-    y = coords.y,
-    z = coords.z
-  })
-  end
-
-  ESX.ShowNotification('Mensagem Enviada')
-
-end)
-``` 
-
-Add this to the config.json of gcphone
-in the " "serviceCall": [...] " area
-
-```
-{
+    },
+    {
       "display": "Taxi",
       "backgroundColor": "yellow",
       "subMenu": [
-		{
-			"title": "I need a ride",
+	  {
+			"title": "Taxi bestellen",
 			"eventName": "esx_addons_gcphone:call",
 			"type": {
 				"number": "taxi",
-				"message": "YOUR MESSAGE...its useless with the aiTaxi-script"
+				"message": "i need a ride"
 			}
-		}
+		},
+        {
+          "title": "Taxi abbestellen",
+          "eventName": "esx_addons_gcphone:call",
+          "type": {
+				"number": "taxi",
+				"message": "cancel"
+			}
+        }
       ]
     }
+  ],
+
+  "defaultContacts": [{
 ```
 
 Known Bugs:
-- sometimes if the taxidriver hits another car he will stop driving and a script restart is needed
-(actually dont know how to fix)
+- sometimes if the taxidriver hits another car he will stop driving and you have to cancel the order.
 - sometime the drivingmode is a little bit weird. if someone gets a better one feel free to share
