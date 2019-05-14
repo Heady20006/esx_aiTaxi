@@ -50,6 +50,7 @@ end)
  and replace it with:
 
 ```
+RegisterServerEvent('esx_addons_gcphone:startCall')
 AddEventHandler('esx_addons_gcphone:startCall', function (number, message, coords)
   local source = source
   if PhoneNumbers[number] ~= nil then
@@ -70,6 +71,80 @@ AddEventHandler('esx_addons_gcphone:startCall', function (number, message, coord
 end)
 ```
 
+to get it work with esx_phone3 you have to edit this:
+client/main.lua
+find:
+
+```
+RegisterNUICallback('send', function(data)
+
+  local phoneNumber = data.number
+  local playerPed   = GetPlayerPed(-1)
+  local coords      = GetEntityCoords(playerPed)
+
+  if tonumber(phoneNumber) ~= nil then
+    phoneNumber = tonumber(phoneNumber)
+  end
+
+  TriggerServerEvent('esx_phone:send', phoneNumber, data.message, data.anon, {
+    x = coords.x,
+    y = coords.y,
+    z = coords.z
+  })
+
+  ESX.ShowNotification('Mensagem Enviada')
+
+end)
+```
+
+and replace with:
+
+```
+RegisterNUICallback('send', function(data)
+
+  local phoneNumber = data.number
+  local playerPed   = GetPlayerPed(-1)
+  local coords      = GetEntityCoords(playerPed)
+	if data.number == 'taxi' then
+		TriggerEvent('esx_aiTaxi:callTaxi', coords)
+	else
+  if tonumber(phoneNumber) ~= nil then
+    phoneNumber = tonumber(phoneNumber)
+  end
+
+  TriggerServerEvent('esx_phone:send', phoneNumber, data.message, data.anon, {
+    x = coords.x,
+    y = coords.y,
+    z = coords.z
+  })
+  end
+
+  ESX.ShowNotification('Mensagem Enviada')
+
+end)
+``` 
+
+Add this to the config.json of gcphone
+in the " "serviceCall": [...] " area
+
+```
+{
+      "display": "Taxi",
+      "backgroundColor": "yellow",
+      "subMenu": [
+		{
+			"title": "I need a ride",
+			"eventName": "esx_addons_gcphone:call",
+			"type": {
+				"number": "taxi",
+				"message": "YOUR MESSAGE...its useless with the aiTaxi-script"
+			}
+		}
+      ]
+    }
+```
+
 Known Bugs:
 - sometimes if the taxidriver hits another car he will stop driving and a script restart is needed
 (actually dont know how to fix)
+- sometime the drivingmode is a little bit weird. if someone gets a better one feel free to share
