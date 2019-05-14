@@ -31,29 +31,53 @@ end)
 
 RegisterNetEvent('esx_aiTaxi:callTaxi')
 AddEventHandler('esx_aiTaxi:callTaxi', function(coords)
-	customer = coords
-	while not HasModelLoaded(hash) do
-		RequestModel(hash)
-		Wait(50)
+	if customer then
+		ESX.ShowHelpNotification('Es ist bereits ein Taxi unterwegs zu ihnen')
+	else
+		customer = coords
+		-- get best spawnpoint
+		playerPed = GetPlayerPed(-1)
+		myCoords = GetEntityCoords(playerPed)
+		for k,v in pairs(Config.SpawnPoints) do
+			heading = v.h
+			v = vector3(v.x, v.y, v.z)
+			spawnDistance = GetDistanceBetweenCoords(myCoords, v)
+			if oldDistance then
+				if spawnDistance < oldDistance then
+					oldDistance = spawnDistance
+					realSpawnPoint = v
+				else
+					oldDistance = oldDistance
+				end
+			else
+				oldDistance = spawnDistance
+				realSpawnPoint = v
+			end
+		end
+		while not HasModelLoaded(hash) do
+			RequestModel(hash)
+			Wait(50)
+		end
+		while not HasModelLoaded(vehicleHash) do
+			RequestModel(vehicleHash)
+			Wait(50)
+		end
+		if ped == nil then
+			ped =  CreatePed(4, hash, realSpawnPoint.x, realSpawnPoint.y, realSpawnPoint.z + 2, 0.0, true, true)
+		end
+		if DoesEntityExist(globalTaxi) then
+			ESX.Game.DeleteVehicle(globalTaxi)
+		end
+		
+		ESX.Game.SpawnVehicle(vehicleHash, realSpawnPoint, heading, function(callback_vehicle)
+			TaskWarpPedIntoVehicle(ped, callback_vehicle, -1)
+			SetVehicleHasBeenOwnedByPlayer(callback_vehicle, true)
+			taxiBlip = true
+			globalTaxi = callback_vehicle
+			SetEntityAsMissionEntity(globalTaxi, true, true)
+			drive(customer.x, customer.y, customer.z, false, 'start')
+		end)
 	end
-	while not HasModelLoaded(vehicleHash) do
-		RequestModel(vehicleHash)
-		Wait(50)
-	end
-	if ped == nil then
-		ped =  CreatePed(4, hash, Config.PedSpawn, Config.PedSpawnHeading, true, true)
-	end
-	if DoesEntityExist(globalTaxi) then
-		ESX.Game.DeleteVehicle(globalTaxi)
-	end
-	ESX.Game.SpawnVehicle(vehicleHash, Config.TaxiSpawn, Config.TaxiSpawnHeading, function(callback_vehicle)
-		TaskWarpPedIntoVehicle(ped, callback_vehicle, -1)
-		SetVehicleHasBeenOwnedByPlayer(callback_vehicle, true)
-		taxiBlip = true
-		globalTaxi = callback_vehicle
-		SetEntityAsMissionEntity(globalTaxi, true, true)
-		drive(customer.x, customer.y, customer.z, false, 'start')
-	end)
 end)
 
 RegisterNetEvent('esx_aiTaxi:setTaxiBlip')
@@ -75,6 +99,11 @@ end)
 RegisterNetEvent('esx_aiTaxi:killTaxiBlip')
 AddEventHandler('esx_aiTaxi:killTaxiBlip', function()
 	RemoveBlip(CarBlip)
+end)
+
+RegisterNetEvent('esx_aiTaxi:cancelTaxi')
+AddEventHandler('esx_aiTaxi:cancelTaxi', function(message)
+	atTarget(message)
 end)
 
 Citizen.CreateThread(function()
@@ -180,16 +209,28 @@ Citizen.CreateThread(function()
 	end
 end)
 
-function atTarget()
+function atTarget(cancel)
+	cancelTaxi = false
+	if cancel then
+		playerPed = GetPlayerPed(-1)
+		local vehicle = GetVehiclePedIsIn(playerPed, false)
+		if vehicle ~= globalTaxi then
+			TriggerEvent('esx:showNotification', 'Taxi wurde abbestellt')
+			cancelTaxi = true
+		else
+			TriggerEvent('esx:showNotification', 'Taxi kann nicht mehr abbestellt werden')
+			return
+		end
+	end
+	if not cancelTaxi then
+		ESX.ShowHelpNotification('Wir sind am Ziel angekommen')
+		route2 = CalculateTravelDistanceBetweenPoints(customer.x, customer.y, customer.z, targetX, targetY, targetZ)
+		price = (route2/1000) * Config.Price
+		TriggerServerEvent('esx_aiTaxi:pay', price)
+		TaskLeaveVehicle(GetPlayerPed(-1), globalTaxi, 1)
+		Citizen.Wait(5000)
+	end
 	onWayBack = true
-	ESX.ShowHelpNotification('Wir sind am Ziel angekommen')
-	route2 = CalculateTravelDistanceBetweenPoints(customer.x, customer.y, customer.z, targetX, targetY, targetZ)
-	price = (route2/1000) * Config.Price
-	TriggerServerEvent('esx_aiTaxi:pay', price)
-	TaskLeaveVehicle(GetPlayerPed(-1), globalTaxi, 1)
-	Citizen.Wait(5000)
-	--drive(899.30, -180.97, 72.84)
-	drive(26.92, -1736.77, 28.3, true, 'end')
 	customer = nil
 	targetX = nil
 	taxiBlip = nil
@@ -198,9 +239,9 @@ function atTarget()
 	taxiArrived = false
 	onTour = false
 	onWayBack = false
+	drive(26.92, -1736.77, 28.3, true, 'end')
 	ped = nil
 	globalTaxi = nil
-	
 end
 
 function parking(x, y ,z)
