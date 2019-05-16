@@ -160,7 +160,7 @@ Citizen.CreateThread(function()
 						parking(customer.x, customer.y, customer.z)
 						TriggerEvent('esx:showNotification', 'Ihr Taxi ist da')
 					end
-					if GetDistanceBetweenCoords(myCoords.x, myCoords.y, myCoords.z, taxiCoords.x, taxiCoords.y, taxiCoords.z, true) <= 3 then
+					if GetDistanceBetweenCoords(customer.x, customer.y, customer.z, taxiCoords.x, taxiCoords.y, taxiCoords.z, true) <= 3 then
 						taxiArrived = true
 					end
 				end
